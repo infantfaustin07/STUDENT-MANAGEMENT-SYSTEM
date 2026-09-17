@@ -31,7 +31,11 @@ function resolveApiBaseUrl() {
   );
 
   const selectedUrl = isLocal ? localDefault : prodDefault;
-  return (selectedUrl || 'http://127.0.0.1:8000/api').replace(/\/+$/, '');
+  let url = (selectedUrl || 'https://student-management-system-ge3z.onrender.com/api').trim().replace(/\/+$/, '');
+  if (!url.endsWith('/api')) {
+    url += '/api';
+  }
+  return url;
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
