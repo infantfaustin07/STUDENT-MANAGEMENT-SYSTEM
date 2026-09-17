@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    Student Management System — app.js
    API client, DOM management, and UI interactions.
    ============================================================ */
@@ -6,8 +6,35 @@
 'use strict';
 
 // ── Configuration ────────────────────────────────────────────────────────
-// Change this to match your Django server address if needed.
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+// Resolves API base URL dynamically based on environment:
+// 1. Checks localStorage override ('API_BASE_URL') for live testing
+// 2. Uses DEV_API_URL when running locally (localhost, 127.0.0.1, file://)
+// 3. Uses PROD_API_URL when deployed (e.g. Vercel)
+function resolveApiBaseUrl() {
+  const config = window.APP_CONFIG || {};
+  const localDefault = config.DEV_API_URL || 'http://127.0.0.1:8000/api';
+  const prodDefault = config.PROD_API_URL || 'http://127.0.0.1:8000/api';
+
+  try {
+    const override = window.localStorage && window.localStorage.getItem('API_BASE_URL');
+    if (override) {
+      return override.replace(/\/+$/, '');
+    }
+  } catch (e) {
+    // localStorage might be unavailable in certain sandbox environments
+  }
+
+  const isLocal = typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.protocol === 'file:'
+  );
+
+  const selectedUrl = isLocal ? localDefault : prodDefault;
+  return (selectedUrl || 'http://127.0.0.1:8000/api').replace(/\/+$/, '');
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 // ── State ────────────────────────────────────────────────────────────────
 let allStudents  = [];   // full list returned from API
@@ -129,10 +156,14 @@ async function loadStudents() {
     updateStats(allStudents);
     renderTable(allStudents);
   } catch (err) {
-    console.error('Failed to load students:', err);
+    console.error('Failed to load students from:', API_BASE_URL, err);
     showLoading(false);
-    showEmptyState('Could not connect to server', 'Make sure the Django backend is running on port 8000.');
-    showToast('error', 'Connection Error', 'Could not load students. Is the backend running?');
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const hintMsg = isLocal
+      ? 'Make sure the local Django server is running (python manage.py runserver).'
+      : `Cannot reach API at ${API_BASE_URL}. Ensure your Render service is deployed and active.`;
+    showEmptyState('Could not connect to server', hintMsg);
+    showToast('error', 'Connection Error', 'Could not load students. Is the API backend reachable?');
   }
 }
 
